@@ -1,0 +1,19 @@
+steps:
+- name: maven:3-jdk-11
+    entrypoint: mvn
+    args: [ 'test' ]
+- name: maven:3-jdk-11
+  entrypoint: mvn
+  args: ['package','-Dmaven.test.skip=true']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args: 
+    - -c
+    - | 
+      if [[ "$BRANCH_NAME" == "main" ]]
+      then
+        mvn -DskipTests appengine:deploy
+      else
+        echo "Skipping deploy"
+      fi
+timeout: '1600s'
