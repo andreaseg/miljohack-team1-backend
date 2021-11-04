@@ -70,3 +70,4 @@ outTmp/
 /kotlin-native/dist
 kotlin-ide/
 .idea/
+target/
