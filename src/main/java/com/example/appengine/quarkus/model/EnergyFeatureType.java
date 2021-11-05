@@ -12,5 +12,19 @@ public enum EnergyFeatureType {
     FRIDGE,
     WASHING_MACHINE,
     CLOTHES_DRYER,
-    ENERGY_SAVER_SHOWER
+    SHOWER;
+
+    private static final Double HOURS_IN_A_YEAR = 365.24 * 24;
+
+    public EnergyFeature createFeature(Double kwh, Double pricePerKwH, Double CO2KiloPerKwH) {
+        var feature = new EnergyFeature();
+        feature.type = this;
+        feature.energy = kwh;
+
+        feature.expense = pricePerKwH * kwh;
+
+        feature.pollution = CO2KiloPerKwH * kwh;
+
+        return feature;
+    }
 }

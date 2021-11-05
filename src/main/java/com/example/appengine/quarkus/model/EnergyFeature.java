@@ -11,7 +11,7 @@ public class EnergyFeature {
     @Schema(description = "The expenses of the feature in NOK/Month")
     public Double expense;
 
-    @Schema(description = "The energy used in KW / month")
+    @Schema(description = "The energy used in KW / year")
     public Double energy;
 
     @Schema(description = "The pollution caused in yearly CO2 equivalents")

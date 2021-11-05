@@ -8,7 +8,7 @@ import java.util.List;
 public class House {
 
     @Schema(description = "The area of the house in square meters")
-    public String area;
+    public Double area;
 
     @Schema(description = "The number of floors in the house. If not set may default to 1")
     public Integer floors;

@@ -30,6 +30,12 @@ public class HouseResource {
     @ConfigProperty(name = "store.impl")
     String storeImplementation;
 
+    @ConfigProperty(name = "energy.price")
+    Double energyPrice;
+
+    @ConfigProperty(name = "energy.pollution")
+    Double energyPollution;
+
     @ConfigProperty(name = "GOOGLE_CLOUD_PROJECT")
     Optional<String> projectId;
 
@@ -78,11 +84,11 @@ public class HouseResource {
     @GET
     @Path("/{id}/energy")
     @Produces(MediaType.APPLICATION_JSON)
-    @Operation(description = "Get a house from datastore by id")
+    @Operation(description = "Analyze the energy used by a house and determine the energy characteristics")
     public EnergyAnalysis getEnergyAnalysis(@Parameter(description = "The id. Format is UUID") @PathParam("id") String id) {
         var house = get(id);
 
-        return EnergyCalculator.analyze(house);
+        return EnergyCalculator.analyze(house, energyPrice, energyPollution);
     }
 
     @POST

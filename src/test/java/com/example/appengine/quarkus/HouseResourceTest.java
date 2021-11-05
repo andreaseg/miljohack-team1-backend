@@ -16,6 +16,7 @@
 
 package com.example.appengine.quarkus;
 
+import com.example.appengine.quarkus.model.House;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
@@ -25,17 +26,13 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 public class HouseResourceTest {
 
 
-    private class TestHouse {
-        public String data = UUID.randomUUID().toString();
 
-    }
 
     @BeforeEach
     public void setUp() {
@@ -47,9 +44,12 @@ public class HouseResourceTest {
     @Test
     public void postNew() {
 
+        var house = new House();
+        house.data = UUID.randomUUID().toString();
+
         given()
                 .when()
-                .body(new TestHouse())
+                .body(house)
                 .contentType(ContentType.JSON)
                 .accept(ContentType.ANY)
                 .post("/houses/")
@@ -64,7 +64,8 @@ public class HouseResourceTest {
 
         var uuid = UUID.randomUUID();
 
-        var body = new TestHouse();
+        var body = new House();
+        body.data = UUID.randomUUID().toString();
 
         given()
                 .when()
@@ -87,7 +88,7 @@ public class HouseResourceTest {
     public void preventInvalidId() {
         var id = "invalid";
 
-        var body = new TestHouse();
+        var body = new House();
 
         given()
                 .when()
@@ -108,5 +109,31 @@ public class HouseResourceTest {
                 .get("/houses/" + id)
                 .then()
                 .statusCode(404);
+    }
+
+
+    @Test
+    public void checkEnergyEndpoint() {
+        var uuid = UUID.randomUUID();
+
+        var house = new House();
+        house.area = 60.0;
+        house.constructionYear = 2006;
+
+        given()
+                .when()
+                .body(house)
+                .contentType(ContentType.JSON)
+                .post("/houses/" + uuid)
+                .then()
+                .statusCode(204);
+
+        given()
+                .when()
+                .accept(ContentType.JSON)
+                .get("/houses/" + uuid + "/energy")
+                .then()
+                .statusCode(200)
+                .body(allOf(is(new PrintMatcher())), not(emptyOrNullString()));
     }
 }

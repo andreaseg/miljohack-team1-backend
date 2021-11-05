@@ -10,5 +10,6 @@ public enum Improvement {
     WINDOWS,
     SOLAR_CELLS,
     GEOTHERMAL,
-    DISTRICT_HEATING
+    DISTRICT_HEATING,
+    SHOWER
 }
