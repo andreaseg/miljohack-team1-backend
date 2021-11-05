@@ -42,6 +42,8 @@ public class EnergyCalculator {
 
         if (!house.isApartment) {
             calculator.analyzeStandaloneHouse(house, analysis);
+        } else {
+            calculator.analyseApartment(house, analysis);
         }
 
         calculator.analyseHouse(house, analysis);
@@ -121,8 +123,7 @@ public class EnergyCalculator {
         var energyUsage = energy;
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.SOLAR_CELLS)) {
-            var solarCellBenefit = house.area != null ? house.area / 60 * 100.0 : 100.0;
-            solarCellBenefit *= 365.24;
+            var solarCellBenefit = house.area / 60 * 100.0 * 365.24;
             energyUsage = max(0.0, energyUsage - solarCellBenefit);
         }
 
@@ -145,6 +146,31 @@ public class EnergyCalculator {
                 weights != null && energy != null ? FLOORS.createFeature(energy * weights.floor, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? WINDOWS.createFeature(energy * weights.window, pricePerKwH, CO2KiloPerKwH) : null,
                 energyUsage != null ? HEATING_UNIT.createFeature(energyUsage, pricePerKwH, CO2KiloPerKwH) : null
+        ));
+    }
+
+    void analyseApartment(House house, EnergyAnalysis analysis) {
+
+        var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
+        Double energy;
+        if (house.area != null && house.constructionYear != null) {
+            energy = energyByAreaHeuristic(house.area, false) * energyByConstructionYearHeuristic(house.constructionYear);
+        } else if (house.area != null) {
+            energy = energyByAreaHeuristic(house.area, false);
+        } else {
+            energy = null;
+        }
+
+
+        if (weights != null && energy != null) {
+            // Fudge energy for apartments so they don't leak to above and below
+            energy *= (weights.wall + weights.window) / (weights.window + weights.floor + weights.wall + weights.window);
+        }
+
+        analysis.features.addAll(listOf(
+                weights != null && energy != null ? WALLS.createFeature(energy * weights.wall, pricePerKwH, CO2KiloPerKwH) : null,
+                weights != null && energy != null ? WINDOWS.createFeature(energy * weights.window, pricePerKwH, CO2KiloPerKwH) : null,
+                energy != null ? HEATING_UNIT.createFeature(energy, pricePerKwH, CO2KiloPerKwH) : null
         ));
     }
 

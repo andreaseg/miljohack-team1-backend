@@ -16,10 +16,12 @@
 
 package com.example.appengine.quarkus;
 
+import com.example.appengine.quarkus.model.EnergyFeatureType;
 import com.example.appengine.quarkus.model.House;
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -30,8 +32,6 @@ import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 public class HouseResourceTest {
-
-
 
 
     @BeforeEach
@@ -135,5 +135,37 @@ public class HouseResourceTest {
                 .then()
                 .statusCode(200)
                 .body(allOf(is(new PrintMatcher())), not(emptyOrNullString()));
+    }
+
+
+    @Test
+    void checkThatApartmentDoesNotHaveCeiling() {
+        var uuid = UUID.randomUUID();
+
+        var house = new House();
+        house.area = 60.0;
+        house.constructionYear = 2006;
+        house.isApartment = true;
+
+        given()
+                .when()
+                .body(house)
+                .contentType(ContentType.JSON)
+                .post("/houses/" + uuid)
+                .then()
+                .statusCode(204);
+
+        given()
+                .when()
+                .accept(ContentType.JSON)
+                .get("/houses/" + uuid + "/energy")
+                .then()
+                .statusCode(200)
+                .body(allOf(
+                        new PrintMatcher(),
+                        not(emptyOrNullString()),
+                        not(containsString(EnergyFeatureType.CEILINGS.toString())),
+                        not(containsString(EnergyFeatureType.FLOORS.toString()))
+                ));
     }
 }
