@@ -82,6 +82,10 @@ public class EnergyCalculator {
         Double floor;
         Double window;
         Double wall;
+
+        double sum() {
+            return roof + floor + window + wall;
+        }
     }
 
     private Weights weights(double area, int floors) {
@@ -101,7 +105,7 @@ public class EnergyCalculator {
         weights.wall = weightedWallSize / surface;
 
 
-        if (abs(weights.roof + weights.floor + weights.window + weights.wall - 1) > 0.0001) {
+        if (abs(weights.sum() - 1) > 0.0001) {
             throw new IllegalStateException("Invalid weights");
         }
 
@@ -140,6 +144,18 @@ public class EnergyCalculator {
         return 0.5;
     }
 
+    private double windowImprovementFactor() {
+        return 0.35;
+    }
+
+    private double wallIsolationImprovementFactor() {
+        return 0.25;
+    }
+
+    private double targetedIsolationImprovementFactor() {
+        return 0.80;
+    }
+
     void analyzeStandaloneHouse(House house, EnergyAnalysis analysis) {
 
         var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
@@ -165,12 +181,25 @@ public class EnergyCalculator {
             energyUsage *= districtHeatingFactor();
         }
 
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.WINDOWS)) {
+            weights.window *= windowImprovementFactor();
+        }
+
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.TARGETED_ISOLATION)) {
+            weights.wall *= targetedIsolationImprovementFactor();
+            weights.roof *= targetedIsolationImprovementFactor();
+        }
+
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.WALL_ISOLATION)) {
+            weights.wall *= wallIsolationImprovementFactor();
+        }
+
         analysis.features.addAll(listOf(
                 weights != null && energy != null ? CEILINGS.createFeature(energy * weights.floor, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? WALLS.createFeature(energy * weights.wall, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? FLOORS.createFeature(energy * weights.floor, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? WINDOWS.createFeature(energy * weights.window, pricePerKwH, CO2KiloPerKwH) : null,
-                energyUsage != null ? HEATING_UNIT.createFeature(energyUsage, pricePerKwH, CO2KiloPerKwH) : null
+                energyUsage != null ? HEATING_UNIT.createFeature(energyUsage * weights.sum(), pricePerKwH, CO2KiloPerKwH) : null
         ));
     }
 
@@ -181,7 +210,7 @@ public class EnergyCalculator {
 
         if (weights != null && energy != null) {
             // Fudge energy for apartments so they don't leak to above and below
-            energy *= (weights.wall + weights.window) / (weights.window + weights.floor + weights.wall + weights.window);
+            energy *= (weights.wall + weights.window) / (weights.sum());
         }
 
         analysis.features.addAll(listOf(
