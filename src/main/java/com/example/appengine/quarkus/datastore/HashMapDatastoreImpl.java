@@ -1,4 +1,4 @@
-package com.example.appengine.quarkus;
+package com.example.appengine.quarkus.datastore;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

@@ -1,4 +1,4 @@
-package com.example.appengine.quarkus;
+package com.example.appengine.quarkus.datastore;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.Firestore;

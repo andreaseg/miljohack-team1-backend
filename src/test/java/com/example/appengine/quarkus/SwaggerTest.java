@@ -25,8 +25,7 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 public class SwaggerTest {
@@ -49,7 +48,7 @@ public class SwaggerTest {
                 .get("/swagger.yaml")
                 .then()
                 .statusCode(200)
-                .body(is(new PrintMatcher()));
+                .body(allOf(is(new PrintMatcher())), not(emptyOrNullString()));
 
     }
 

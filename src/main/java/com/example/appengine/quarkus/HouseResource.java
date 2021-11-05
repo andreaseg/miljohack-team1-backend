@@ -1,5 +1,10 @@
 package com.example.appengine.quarkus;
 
+import com.example.appengine.quarkus.datastore.Datastore;
+import com.example.appengine.quarkus.datastore.FirestoreDatastoreImpl;
+import com.example.appengine.quarkus.datastore.HashMapDatastoreImpl;
+import com.example.appengine.quarkus.model.EnergyAnalysis;
+import com.example.appengine.quarkus.model.House;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -68,6 +73,16 @@ public class HouseResource {
         }
 
         return object;
+    }
+
+    @GET
+    @Path("/{id}/energy")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(description = "Get a house from datastore by id")
+    public EnergyAnalysis getEnergyAnalysis(@Parameter(description = "The id. Format is UUID") @PathParam("id") String id) {
+        var house = get(id);
+
+        return EnergyCalculator.analyze(house);
     }
 
     @POST
