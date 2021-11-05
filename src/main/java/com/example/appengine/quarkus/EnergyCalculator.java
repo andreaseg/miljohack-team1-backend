@@ -42,6 +42,8 @@ public class EnergyCalculator {
 
         if (!house.isApartment) {
             calculator.analyzeStandaloneHouse(house, analysis);
+        } else {
+            calculator.analyseApartment(house, analysis);
         }
 
         calculator.analyseHouse(house, analysis);
@@ -80,6 +82,10 @@ public class EnergyCalculator {
         Double floor;
         Double window;
         Double wall;
+
+        double sum() {
+            return roof + floor + window + wall;
+        }
     }
 
     private Weights weights(double area, int floors) {
@@ -99,44 +105,93 @@ public class EnergyCalculator {
         weights.wall = weightedWallSize / surface;
 
 
-        if (abs(weights.roof + weights.floor + weights.window + weights.wall - 1) > 0.0001) {
+        if (abs(weights.sum() - 1) > 0.0001) {
             throw new IllegalStateException("Invalid weights");
         }
 
         return weights;
     }
 
+    private Double energyByAreaAndYearHeuristic(Double area, Integer constructionYear) {
+        if (area != null && constructionYear != null) {
+            return energyByAreaHeuristic(area, false) * energyByConstructionYearHeuristic(constructionYear);
+        } else if (area != null) {
+            return energyByAreaHeuristic(area, false);
+        } else {
+            return null;
+        }
+    }
+
+    private double solarCellBenefit(double houseArea) {
+        var daysInYear = 365.24;
+        var inverseSizeScale = 1 / 60.0;
+        var wattsPerPanel = 100.0;
+        return houseArea * daysInYear * inverseSizeScale * wattsPerPanel;
+    }
+
+    private double geoBenefit() {
+        var daysInYear = 365.24;
+        var wattBenefit = 1000;
+
+        return wattBenefit * daysInYear;
+    }
+
+    private double heatExchangeFactor() {
+        return 0.5;
+    }
+
+    private double districtHeatingFactor() {
+        return 0.5;
+    }
+
+    private double windowImprovementFactor() {
+        return 0.35;
+    }
+
+    private double wallIsolationImprovementFactor() {
+        return 0.25;
+    }
+
+    private double targetedIsolationImprovementFactor() {
+        return 0.80;
+    }
+
     void analyzeStandaloneHouse(House house, EnergyAnalysis analysis) {
 
         var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
-        Double energy;
-        if (house.area != null && house.constructionYear != null) {
-            energy = energyByAreaHeuristic(house.area, false) * energyByConstructionYearHeuristic(house.constructionYear);
-        } else if (house.area != null) {
-            energy = energyByAreaHeuristic(house.area, false);
-        } else {
-            energy = null;
-        }
+        Double energy = energyByAreaAndYearHeuristic(house.area, house.constructionYear);
 
         var energyUsage = energy;
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.SOLAR_CELLS)) {
-            var solarCellBenefit = house.area != null ? house.area / 60 * 100.0 : 100.0;
-            solarCellBenefit *= 365.24;
+            var solarCellBenefit = solarCellBenefit(house.area);
             energyUsage = max(0.0, energyUsage - solarCellBenefit);
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.GEOTHERMAL)) {
-            var geoBenefit = 1000 * 365;
+            var geoBenefit = geoBenefit();
             energyUsage = max(0.0, energyUsage - geoBenefit);
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.HEAT_EXCHANGE_UNIT)) {
-            energyUsage *= 0.5;
+            energyUsage *= heatExchangeFactor();
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.DISTRICT_HEATING)) {
-            energyUsage *= 0.5;
+            energyUsage *= districtHeatingFactor();
+        }
+
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.WINDOWS)) {
+            weights.window *= windowImprovementFactor();
+        }
+
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.TARGETED_ISOLATION)) {
+            weights.wall *= targetedIsolationImprovementFactor();
+            weights.roof *= targetedIsolationImprovementFactor();
+        }
+
+        if (weights != null && house.improvements != null && house.improvements.contains(Improvement.WALL_ISOLATION)) {
+            weights.wall *= wallIsolationImprovementFactor();
         }
 
         analysis.features.addAll(listOf(
@@ -144,7 +199,24 @@ public class EnergyCalculator {
                 weights != null && energy != null ? WALLS.createFeature(energy * weights.wall, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? FLOORS.createFeature(energy * weights.floor, pricePerKwH, CO2KiloPerKwH) : null,
                 weights != null && energy != null ? WINDOWS.createFeature(energy * weights.window, pricePerKwH, CO2KiloPerKwH) : null,
-                energyUsage != null ? HEATING_UNIT.createFeature(energyUsage, pricePerKwH, CO2KiloPerKwH) : null
+                energyUsage != null ? HEATING_UNIT.createFeature(energyUsage * weights.sum(), pricePerKwH, CO2KiloPerKwH) : null
+        ));
+    }
+
+    void analyseApartment(House house, EnergyAnalysis analysis) {
+
+        var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
+        Double energy = energyByAreaAndYearHeuristic(house.area, house.constructionYear);
+
+        if (weights != null && energy != null) {
+            // Fudge energy for apartments so they don't leak to above and below
+            energy *= (weights.wall + weights.window) / (weights.sum());
+        }
+
+        analysis.features.addAll(listOf(
+                weights != null && energy != null ? WALLS.createFeature(energy * weights.wall, pricePerKwH, CO2KiloPerKwH) : null,
+                weights != null && energy != null ? WINDOWS.createFeature(energy * weights.window, pricePerKwH, CO2KiloPerKwH) : null,
+                energy != null ? HEATING_UNIT.createFeature(energy, pricePerKwH, CO2KiloPerKwH) : null
         ));
     }
 
