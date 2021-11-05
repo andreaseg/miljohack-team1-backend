@@ -2,6 +2,7 @@ package com.example.appengine.quarkus;
 
 import com.google.common.io.Resources;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
+import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.info.Info;
 
 import javax.ws.rs.GET;
@@ -19,6 +20,7 @@ public class BaseResource {
 
     @GET
     @Produces(MediaType.TEXT_HTML)
+    @Operation(hidden = true)
     public String get() throws IOException {
         URL url = Resources.getResource("base.html");
         String text = Resources.toString(url, StandardCharsets.UTF_8);

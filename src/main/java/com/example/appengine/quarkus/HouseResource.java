@@ -2,12 +2,18 @@ package com.example.appengine.quarkus;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.OpenAPIDefinition;
+import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.info.Info;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.Optional;
+import java.util.UUID;
 
 @OpenAPIDefinition(info = @Info(title = "House Api", version = "1.0.0"))
 @Path("/houses")
@@ -54,27 +60,47 @@ public class HouseResource {
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    public House get(@PathParam("id") String id) {
-        return getDatastore().get(id, House.class);
+    @Operation(description = "Get a house from datastore by id")
+    public House get(@Parameter(description = "The id. Format is UUID") @PathParam("id") String id) {
+        var object = getDatastore().get(id, House.class);
+        if (object == null) {
+            throw new WebApplicationException("Object with id '" + id + "' not found", HttpURLConnection.HTTP_NOT_FOUND);
+        }
+
+        return object;
     }
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
-    public String post(House body) {
+    @Operation(description = "Create a new house, returns the id used to retrieve the house as the response")
+    @APIResponse(name = "id", description = "Id of the house that has been created")
+    public String post(@RequestBody(description = "The new house to be created") House body) {
         return getDatastore().put(body);
     }
 
     @POST
     @Path("/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public void post(@PathParam("id") String id, House body) {
+    @Operation(description = "Create a new house with the given id, if the id is taken overwrites the old house")
+    public void post(
+            @Parameter(description = "The id. Format is UUID") @PathParam("id") String id,
+            @RequestBody(description = "The new house to be created, or updated if an old id is used") House body
+    ) {
+        // Check if id is a UUID
+        try {
+            UUID.fromString(id);
+        } catch (IllegalArgumentException ignored) {
+            throw new WebApplicationException("Id '" + id + "' is not a valid UUID", HttpURLConnection.HTTP_BAD_REQUEST);
+        }
+
         getDatastore().put(id, body);
     }
 
     @DELETE
     @Path("{id}")
-    public void delete(@PathParam("id") String id) {
+    @Operation(description = "Delete the house with the given id")
+    public void delete(@Parameter(description = "The id. Format is UUID") @PathParam("id") String id) {
         getDatastore().delete(id);
     }
 }

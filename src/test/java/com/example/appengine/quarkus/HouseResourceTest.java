@@ -82,4 +82,31 @@ public class HouseResourceTest {
                 .statusCode(200)
                 .body(containsString(body.data));
     }
+
+    @Test
+    public void preventInvalidId() {
+        var id = "invalid";
+
+        var body = new TestHouse();
+
+        given()
+                .when()
+                .body(body)
+                .contentType(ContentType.JSON)
+                .post("/houses/" + id)
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    public void notFoundResponse() {
+        var id = "invalid";
+
+        given()
+                .when()
+                .accept(ContentType.JSON)
+                .get("/houses/" + id)
+                .then()
+                .statusCode(404);
+    }
 }
