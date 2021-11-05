@@ -108,36 +108,61 @@ public class EnergyCalculator {
         return weights;
     }
 
+    private Double energyByAreaAndYearHeuristic(Double area, Integer constructionYear) {
+        if (area != null && constructionYear != null) {
+            return energyByAreaHeuristic(area, false) * energyByConstructionYearHeuristic(constructionYear);
+        } else if (area != null) {
+            return energyByAreaHeuristic(area, false);
+        } else {
+            return null;
+        }
+    }
+
+    private double solarCellBenefit(double houseArea) {
+        var daysInYear = 365.24;
+        var inverseSizeScale = 1 / 60.0;
+        var wattsPerPanel = 100.0;
+        return houseArea * daysInYear * inverseSizeScale * wattsPerPanel;
+    }
+
+    private double geoBenefit() {
+        var daysInYear = 365.24;
+        var wattBenefit = 1000;
+
+        return wattBenefit * daysInYear;
+    }
+
+    private double heatExchangeFactor() {
+        return 0.5;
+    }
+
+    private double districtHeatingFactor() {
+        return 0.5;
+    }
+
     void analyzeStandaloneHouse(House house, EnergyAnalysis analysis) {
 
         var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
-        Double energy;
-        if (house.area != null && house.constructionYear != null) {
-            energy = energyByAreaHeuristic(house.area, false) * energyByConstructionYearHeuristic(house.constructionYear);
-        } else if (house.area != null) {
-            energy = energyByAreaHeuristic(house.area, false);
-        } else {
-            energy = null;
-        }
+        Double energy = energyByAreaAndYearHeuristic(house.area, house.constructionYear);
 
         var energyUsage = energy;
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.SOLAR_CELLS)) {
-            var solarCellBenefit = house.area / 60 * 100.0 * 365.24;
+            var solarCellBenefit = solarCellBenefit(house.area);
             energyUsage = max(0.0, energyUsage - solarCellBenefit);
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.GEOTHERMAL)) {
-            var geoBenefit = 1000 * 365;
+            var geoBenefit = geoBenefit();
             energyUsage = max(0.0, energyUsage - geoBenefit);
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.HEAT_EXCHANGE_UNIT)) {
-            energyUsage *= 0.5;
+            energyUsage *= heatExchangeFactor();
         }
 
         if (energyUsage != null && house.improvements != null && house.improvements.contains(Improvement.DISTRICT_HEATING)) {
-            energyUsage *= 0.5;
+            energyUsage *= districtHeatingFactor();
         }
 
         analysis.features.addAll(listOf(
@@ -152,15 +177,7 @@ public class EnergyCalculator {
     void analyseApartment(House house, EnergyAnalysis analysis) {
 
         var weights = house.area != null && house.floors != null ? weights(house.area, house.floors) : null;
-        Double energy;
-        if (house.area != null && house.constructionYear != null) {
-            energy = energyByAreaHeuristic(house.area, false) * energyByConstructionYearHeuristic(house.constructionYear);
-        } else if (house.area != null) {
-            energy = energyByAreaHeuristic(house.area, false);
-        } else {
-            energy = null;
-        }
-
+        Double energy = energyByAreaAndYearHeuristic(house.area, house.constructionYear);
 
         if (weights != null && energy != null) {
             // Fudge energy for apartments so they don't leak to above and below
